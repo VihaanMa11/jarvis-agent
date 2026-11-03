@@ -32,17 +32,11 @@ import { $gateway } from '@/store/gateway'
 import { $activeGatewayProfile } from '@/store/profile'
 import { $projectTree } from '@/store/project-tree'
 import { $scheduleItems, nextScheduleItem, relativeDayLabel } from '@/store/schedule'
-import {
-  $cronSessions,
-  $gatewayState,
-  $messagingPlatformTotals,
-  $messagingSessions,
-  $sessions
-} from '@/store/session'
+import { $cronSessions, $gatewayState, $messagingPlatformTotals, $messagingSessions, $sessions } from '@/store/session'
 import { $sessionStates, $workingSessionIds } from '@/store/session-states'
 import { $subagentsBySession } from '@/store/subagents'
 
-import { SchedulePanel } from './schedule-panel'
+import { ScheduleBoard } from './schedule-panel'
 
 export function JarvisDashboardView() {
   const navigate = useNavigate()
@@ -72,7 +66,9 @@ export function JarvisDashboardView() {
   useEffect(() => {
     const bridge = window.jarvisBridge
 
-    if (!bridge) {return}
+    if (!bridge) {
+      return
+    }
 
     const unbind = bridge.onVoiceStateChange(data => {
       if (data?.state === 'listening' || data?.state === 'speaking') {
@@ -121,7 +117,13 @@ export function JarvisDashboardView() {
       list.push(
         { id: 'coder-bot', name: 'Hermes Coder', status: 'idle', tool: 'Awaiting task', sessionId: '' },
         { id: 'research-bot', name: 'Web Researcher', status: 'idle', tool: 'Awaiting task', sessionId: '' },
-        { id: 'client-support', name: 'Client Telegram Bot', status: 'idle', tool: 'Monitoring inbound channels', sessionId: '' }
+        {
+          id: 'client-support',
+          name: 'Client Telegram Bot',
+          status: 'idle',
+          tool: 'Monitoring inbound channels',
+          sessionId: ''
+        }
       )
     }
 
@@ -197,19 +199,24 @@ export function JarvisDashboardView() {
   }, [artifactRegistry])
 
   // Handle Universal Command Submit
-  const handleCommandSubmit = useCallback((e: React.FormEvent) => {
-    e.preventDefault()
+  const handleCommandSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault()
 
-    if (!commandText.trim()) {return}
+      if (!commandText.trim()) {
+        return
+      }
 
-    // Route prompt to active/new session
-    window.location.hash = '#/'
-    setTimeout(() => {
-      const bridge = window.jarvisBridge
-      bridge?.toggleVoice()
-    }, 150)
-    setCommandText('')
-  }, [commandText])
+      // Route prompt to active/new session
+      window.location.hash = '#/'
+      setTimeout(() => {
+        const bridge = window.jarvisBridge
+        bridge?.toggleVoice()
+      }, 150)
+      setCommandText('')
+    },
+    [commandText]
+  )
 
   // Morning Protocol (Spoken Executive Briefing)
   const handleMorningProtocol = useCallback(() => {
@@ -220,9 +227,10 @@ export function JarvisDashboardView() {
       return
     }
 
-    const text = `Good morning, sir. All core systems are operational on port 9119. ` +
+    const text =
+      `Good morning, sir. All core systems are operational on port 9119. ` +
       `You currently have ${ongoingProjects.length} active projects running, ` +
-      `${blockers.length} items requiring your review in the Action Center, ` +
+      `${blockers.length} things waiting on you, ` +
       `and ${messagingSessions.length} client communications synced. ` +
       `JARVIS is standing by for your instructions.`
 
@@ -281,7 +289,9 @@ export function JarvisDashboardView() {
 
           <div className="vital-metric">
             <span className="vital-label">Tokens Today</span>
-            <span className="vital-value" style={{ color: '#ffb700' }}>42.8k</span>
+            <span className="vital-value" style={{ color: '#ffb700' }}>
+              42.8k
+            </span>
           </div>
 
           {/* Morning Protocol Spoken Briefing Button */}
@@ -341,10 +351,7 @@ export function JarvisDashboardView() {
         </Button>
       </form>
 
-      {/* ──────── Section 1: Calendar & Schedule ──────── */}
-      <SchedulePanel />
-
-      {/* ──────── Section 2: Agent & Bot Fleet Matrix ──────── */}
+      {/* ──────── Section 1: Agent & Bot Fleet Matrix ──────── */}
       <div className="jarvis-section-title">
         <span>⚡ Active Agent & Bot Fleet ({agentFleet.length})</span>
         <span className="text-xs text-slate-400">Live Telemetry</span>
@@ -362,13 +369,9 @@ export function JarvisDashboardView() {
                 <Brain className="size-4 text-cyan-400" />
                 {agent.name}
               </span>
-              <span className={`agent-status-badge status-${agent.status}`}>
-                {agent.status}
-              </span>
+              <span className={`agent-status-badge status-${agent.status}`}>{agent.status}</span>
             </div>
-            <div className="agent-activity-desc">
-              {agent.tool}
-            </div>
+            <div className="agent-activity-desc">{agent.tool}</div>
             <div className="flex items-center justify-between text-xs text-slate-400 mt-1">
               <span>{agent.sessionId ? 'Session Attached' : 'Standby'}</span>
               <ArrowUpRight className="size-4 text-slate-500 hover:text-cyan-400" />
@@ -377,9 +380,60 @@ export function JarvisDashboardView() {
         ))}
       </div>
 
-      {/* ──────── Section 3: Ongoing Projects & Action Center Split ──────── */}
+      {/* ──────── Section 2: The day at a glance — calendar | upcoming | what I have to do ──────── */}
+      <div className="jarvis-row-3">
+        <ScheduleBoard />
+
+        {/* Action Center ("What I Have To Do" - Blockers Queue) */}
+        <div className="jarvis-panel-card is-compact">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-semibold text-rose-300 flex items-center gap-2">
+              <AlertTriangle className="size-4 text-rose-400" />
+              What I Have To Do ({blockers.length})
+            </h3>
+            <span className="text-xs text-rose-400 font-medium">Pending</span>
+          </div>
+
+          {blockers.length === 0 ? (
+            <div className="p-3 text-center text-sm text-slate-500 flex items-center justify-center gap-2">
+              <CheckCircle2 className="size-4 text-emerald-400" />
+              Nothing blocked. All agents are progressing.
+            </div>
+          ) : (
+            blockers.map(b => (
+              <div className="blocker-item" key={b.sessionId}>
+                <div className="blocker-header">
+                  <span>{b.title}</span>
+                  <span className="text-xs font-normal text-rose-400">Blocked on You</span>
+                </div>
+                <div className="blocker-content">{b.reason}</div>
+                <div className="blocker-actions-row">
+                  <Button
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white h-7 text-xs"
+                    onClick={() => (window.location.hash = `#/${b.sessionId}`)}
+                    size="sm"
+                    variant="default"
+                  >
+                    <Check className="size-3.5 mr-1" /> Open & Approve
+                  </Button>
+                  <Button
+                    className="border-slate-700 h-7 text-xs"
+                    onClick={() => (window.location.hash = `#/${b.sessionId}`)}
+                    size="sm"
+                    variant="outline"
+                  >
+                    Inspect
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* ──────── Section 3: Projects & Client Split ──────── */}
       <div className="jarvis-main-split">
-        {/* Left Column: Ongoing Projects & Action Center */}
+        {/* Left Column: Ongoing Projects */}
         <div className="jarvis-column">
           {/* Ongoing Projects */}
           <div className="jarvis-panel-card">
@@ -401,7 +455,7 @@ export function JarvisDashboardView() {
                     <span className="text-xs text-cyan-400 font-semibold">{p.progress}%</span>
                   </div>
                   <p className="text-xs text-slate-400 mt-1">{p.currentTask}</p>
-                  
+
                   {/* Git Ship Station Row */}
                   <div className="flex items-center justify-between text-xs text-slate-400 mt-3 pt-2 border-t border-slate-800/80">
                     <span className="flex items-center gap-1.5">
@@ -410,52 +464,6 @@ export function JarvisDashboardView() {
                     </span>
                     <Button className="h-6 text-xs border-slate-700 hover:border-cyan-500" size="sm" variant="outline">
                       Deploy / Push
-                    </Button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Action Center ("What I Have To Do" - Blockers Queue) */}
-          <div className="jarvis-panel-card">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-rose-300 flex items-center gap-2">
-                <AlertTriangle className="size-4 text-rose-400" />
-                Action Center: What I Have To Do ({blockers.length})
-              </h3>
-              <span className="text-xs text-rose-400 font-medium">Pending Decisions</span>
-            </div>
-
-            {blockers.length === 0 ? (
-              <div className="p-4 text-center text-sm text-slate-500 flex items-center justify-center gap-2">
-                <CheckCircle2 className="size-4 text-emerald-400" />
-                No pending blockers. All agents are autonomously progressing.
-              </div>
-            ) : (
-              blockers.map(b => (
-                <div className="blocker-item" key={b.sessionId}>
-                  <div className="blocker-header">
-                    <span>{b.title}</span>
-                    <span className="text-xs font-normal text-rose-400">Blocked on You</span>
-                  </div>
-                  <div className="blocker-content">{b.reason}</div>
-                  <div className="blocker-actions-row">
-                    <Button
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white h-7 text-xs"
-                      onClick={() => (window.location.hash = `#/${b.sessionId}`)}
-                      size="sm"
-                      variant="default"
-                    >
-                      <Check className="size-3.5 mr-1" /> Open & Approve
-                    </Button>
-                    <Button
-                      className="border-slate-700 h-7 text-xs"
-                      onClick={() => (window.location.hash = `#/${b.sessionId}`)}
-                      size="sm"
-                      variant="outline"
-                    >
-                      Inspect Session
                     </Button>
                   </div>
                 </div>
@@ -490,7 +498,7 @@ export function JarvisDashboardView() {
                     </span>
                   </div>
                   <div className="client-snippet">{c.snippet}</div>
-                  
+
                   {/* 1-Click Draft Response */}
                   <div className="client-draft-box">
                     <span className="text-xs font-semibold text-cyan-400 block mb-1">AI Drafted Reply:</span>
@@ -584,7 +592,10 @@ export function JarvisDashboardView() {
               </div>
             ) : (
               recentArtifacts.map(art => (
-                <div className="p-3 bg-slate-900/60 rounded-md border border-slate-800 flex items-center justify-between" key={art.id}>
+                <div
+                  className="p-3 bg-slate-900/60 rounded-md border border-slate-800 flex items-center justify-between"
+                  key={art.id}
+                >
                   <div>
                     <span className="text-sm font-medium text-slate-200 block">{art.name}</span>
                     <span className="text-xs text-slate-400">{art.type}</span>
@@ -607,7 +618,9 @@ export function JarvisDashboardView() {
               <h2 className="text-lg font-bold text-cyan-400 flex items-center gap-2">
                 <Cpu className="size-5" /> Hardware & Cloud Vitals
               </h2>
-              <Button onClick={() => setShowVitalsModal(false)} size="sm" variant="ghost">✕</Button>
+              <Button onClick={() => setShowVitalsModal(false)} size="sm" variant="ghost">
+                ✕
+              </Button>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3 bg-slate-900 rounded-lg border border-slate-800">
@@ -638,7 +651,9 @@ export function JarvisDashboardView() {
               <h2 className="text-lg font-bold text-cyan-400 flex items-center gap-2">
                 <Brain className="size-5" /> JARVIS Long-Term Memory & Skill Bank
               </h2>
-              <Button onClick={() => setShowMemoryModal(false)} size="sm" variant="ghost">✕</Button>
+              <Button onClick={() => setShowMemoryModal(false)} size="sm" variant="ghost">
+                ✕
+              </Button>
             </div>
             <p className="text-xs text-slate-400 mb-3">Persisted facts and instructions from MEMORY.md</p>
             <div className="p-3 bg-slate-900 rounded-lg border border-slate-800 text-sm text-slate-300 space-y-2">

@@ -376,17 +376,31 @@
 }
 
 /* ──────── Calendar & Schedule ──────── */
-.jarvis-schedule-split {
+/* Three panels on one line — calendar | upcoming | what I have to do — kept
+   short on purpose so the fleet above and the panels below stay on screen. */
+.jarvis-row-3 {
   display: grid;
-  grid-template-columns: 1.05fr 1fr;
-  gap: 24px;
-  margin-bottom: 28px;
+  grid-template-columns: minmax(230px, 1fr) minmax(190px, 0.85fr) minmax(210px, 1fr);
+  gap: 18px;
+  align-items: start;
+  margin-bottom: 24px;
 }
 
-@media (max-width: 1080px) {
-  .jarvis-schedule-split {
+@media (max-width: 1240px) {
+  .jarvis-row-3 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .jarvis-row-3 {
     grid-template-columns: 1fr;
   }
+}
+
+/* The same cards, sized to live three-to-a-row. */
+.jarvis-panel-card.is-compact {
+  padding: 14px;
 }
 
 .jarvis-vital-next {
@@ -690,6 +704,100 @@
 
 .jarvis-sched-remove:hover {
   color: #f87171;
+}
+
+/* ──────── Compact variants (three-up row) ──────── */
+.is-compact .jarvis-cal-head {
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.is-compact .jarvis-cal-month {
+  min-width: 82px;
+  font-size: 0.76rem;
+}
+
+.is-compact .jarvis-cal-weekdays,
+.is-compact .jarvis-cal-grid {
+  gap: 3px;
+}
+
+.is-compact .jarvis-cal-weekdays span {
+  font-size: 0.6rem;
+}
+
+.is-compact .jarvis-cal-day {
+  min-height: 24px;
+  font-size: 0.72rem;
+  border-radius: 6px;
+}
+
+.is-compact .jarvis-cal-dot {
+  bottom: 3px;
+  width: 4px;
+  height: 4px;
+}
+
+.is-compact .jarvis-sched-form {
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.is-compact .jarvis-sched-input {
+  padding: 4px 6px;
+  font-size: 0.72rem;
+}
+
+.is-compact .jarvis-sched-row {
+  gap: 8px;
+  padding: 8px;
+  margin-bottom: 5px;
+}
+
+.is-compact .jarvis-sched-check {
+  width: 16px;
+  height: 16px;
+}
+
+.is-compact .jarvis-sched-row-title {
+  font-size: 0.8rem;
+}
+
+.is-compact .jarvis-sched-row-detail {
+  font-size: 0.72rem;
+}
+
+.is-compact .jarvis-sched-row-when {
+  font-size: 0.68rem;
+}
+
+.is-compact .jarvis-sched-kind {
+  font-size: 0.6rem;
+  padding: 1px 5px;
+}
+
+.is-compact .jarvis-sched-group {
+  margin-top: 8px;
+}
+
+.is-compact .jarvis-sched-group-label {
+  font-size: 0.64rem;
+  margin-bottom: 4px;
+}
+
+.is-compact .blocker-item {
+  gap: 6px;
+  padding: 9px;
+  margin-top: 8px;
+}
+
+.is-compact .blocker-header {
+  font-size: 0.8rem;
+}
+
+.is-compact .blocker-content {
+  font-size: 0.76rem;
 }
 
 @keyframes hud-breathe {

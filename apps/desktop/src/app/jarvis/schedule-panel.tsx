@@ -1,8 +1,15 @@
 /**
  * Mission Control — Calendar & Schedule.
  *
- * The operator's own diary: a month grid with the days that carry something,
- * plus the upcoming list ("what I have to do next") and a one-line add form.
+ * The operator's own diary, in TWO compact panels that sit side by side in the
+ * dashboard's row of three (calendar | upcoming | Action Center): a month grid
+ * with the days that carry something, and the upcoming list ("what I have to do
+ * next"). They share one component because they share one piece of state — the
+ * selected day — and the calendar alone is too tall for the row otherwise.
+ *
+ * The fragment is deliberate: both panels are laid out by the PARENT grid, so
+ * neither wrapping div may exist between it and them.
+ *
  * Renders from `@/store/schedule`, which owns the entries; this file owns only
  * the presentation and the interaction state (which month, which day).
  */
@@ -33,7 +40,8 @@ import type { ScheduleBucket, ScheduleItem, ScheduleKind } from '@/store/schedul
 
 const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 const BUCKET_ORDER: readonly ScheduleBucket[] = ['overdue', 'today', 'tomorrow', 'week', 'later']
-const UPCOMING_CAP = 12
+// The row is deliberately short — the list scrolls by leaving entries out, not by growing.
+const UPCOMING_CAP = 5
 
 /** Six fixed weeks from the Sunday on or before the 1st — stable height. */
 function monthGrid(year: number, month: number): string[] {
@@ -85,7 +93,7 @@ function ScheduleRow({ item, onDelete }: { item: ScheduleItem; onDelete: (id: st
   )
 }
 
-export function SchedulePanel() {
+export function ScheduleBoard() {
   const items = useStore($scheduleItems)
   const today = todayKey()
   const todayDate = new Date()
@@ -173,9 +181,9 @@ export function SchedulePanel() {
   const openCount = items.filter(item => !item.done).length
 
   return (
-    <div className="jarvis-schedule-split">
+    <>
       {/* ── Month grid + add form ── */}
-      <div className="jarvis-panel-card">
+      <div className="jarvis-panel-card is-compact">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-slate-200 flex items-center gap-2">
             <Clock className="size-4 text-cyan-400" />
@@ -299,7 +307,7 @@ export function SchedulePanel() {
       </div>
 
       {/* ── Upcoming, or the selected day ── */}
-      <div className="jarvis-panel-card">
+      <div className="jarvis-panel-card is-compact">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-slate-200 flex items-center gap-2">
             <Clock className="size-4 text-cyan-400" />
@@ -353,6 +361,6 @@ export function SchedulePanel() {
           </>
         )}
       </div>
-    </div>
+    </>
   )
 }
