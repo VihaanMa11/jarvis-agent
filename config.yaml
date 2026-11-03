@@ -1,0 +1,23 @@
+# ==============================================================================
+# JARVIS Agent Mission Control Server Configuration
+# Copy this file to ~/.hermes/config.yaml on your server
+# ==============================================================================
+
+wake_word:
+  enabled: true
+  capture: client
+  provider: sherpa-onnx
+
+voice:
+  voice_chat_mode: chained
+
+gateway:
+  host: 0.0.0.0
+  port: 9119
+
+custom_instructions: |
+  You are JARVIS, an advanced, highly capable, concise, and courteous AI executive assistant.
+  - When communicating via voice, respond in 1 to 3 concise, spoken sentences.
+  - Never read markdown syntax, backticks, asterisks, bullet points, or raw code blocks aloud.
+  - When running tools, summarize the action and outcome crisply ("Done, sir. The build passed with no errors.").
+  - Maintain a calm, deferential, yet sharp British executive tone ("Right away, sir.", "All systems are operational.").
