@@ -375,6 +375,323 @@
   color: #f1f5f9;
 }
 
+/* ──────── Calendar & Schedule ──────── */
+.jarvis-schedule-split {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 1080px) {
+  .jarvis-schedule-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+.jarvis-vital-next {
+  max-width: 230px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jarvis-cal-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.jarvis-cal-month {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #e2e8f0;
+  min-width: 104px;
+  text-align: center;
+}
+
+.jarvis-cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.jarvis-cal-weekdays span {
+  text-align: center;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #64748b;
+}
+
+.jarvis-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.jarvis-cal-day {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1 / 1;
+  min-height: 30px;
+  padding: 0;
+  background: rgba(30, 41, 59, 0.35);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #cbd5e1;
+  font-size: 0.78rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.jarvis-cal-day:hover {
+  border-color: rgba(0, 240, 255, 0.35);
+}
+
+.jarvis-cal-day.is-outside {
+  background: transparent;
+  color: #475569;
+}
+
+.jarvis-cal-day.is-today {
+  border-color: rgba(0, 240, 255, 0.6);
+  color: #00f0ff;
+  font-weight: 700;
+}
+
+.jarvis-cal-day.is-selected {
+  background: rgba(0, 240, 255, 0.16);
+  border-color: #00f0ff;
+  color: #e6feff;
+}
+
+.jarvis-cal-dot {
+  position: absolute;
+  bottom: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #00f0ff;
+  box-shadow: 0 0 6px rgba(0, 240, 255, 0.8);
+}
+
+.jarvis-cal-dot[data-count='2'] {
+  background: #fbbf24;
+  box-shadow: 0 0 6px rgba(251, 191, 36, 0.8);
+}
+
+.jarvis-cal-dot[data-count='3+'] {
+  background: #f87171;
+  box-shadow: 0 0 6px rgba(248, 113, 113, 0.8);
+}
+
+.jarvis-sched-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(51, 65, 85, 0.5);
+}
+
+.jarvis-sched-input {
+  flex: 0 1 auto;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: #e2e8f0;
+  font-size: 0.78rem;
+  font-family: inherit;
+  outline: none;
+  color-scheme: dark;
+  user-select: text;
+}
+
+.jarvis-sched-input:focus {
+  border-color: rgba(0, 240, 255, 0.5);
+}
+
+.jarvis-sched-input-title {
+  flex: 1 1 100%;
+}
+
+.jarvis-sched-error {
+  margin: 8px 0 0 0;
+  font-size: 0.75rem;
+  color: #f87171;
+}
+
+.jarvis-sched-group {
+  margin-top: 12px;
+}
+
+.jarvis-sched-group-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.jarvis-sched-group-label.label-overdue {
+  color: #f87171;
+}
+
+.jarvis-sched-group-label.label-today {
+  color: #00f0ff;
+}
+
+.jarvis-sched-group-label.label-tomorrow {
+  color: #fbbf24;
+}
+
+.jarvis-sched-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(51, 65, 85, 0.4);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.jarvis-sched-row:hover {
+  border-color: rgba(0, 240, 255, 0.3);
+}
+
+.jarvis-sched-row.is-done {
+  opacity: 0.55;
+}
+
+.jarvis-sched-row.is-done .jarvis-sched-row-title {
+  text-decoration: line-through;
+}
+
+.jarvis-sched-check {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  border-radius: 5px;
+  color: #00f0ff;
+  cursor: pointer;
+}
+
+.jarvis-sched-row.is-done .jarvis-sched-check {
+  background: rgba(0, 240, 255, 0.18);
+  border-color: #00f0ff;
+}
+
+.jarvis-sched-row-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.jarvis-sched-row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.jarvis-sched-row-title {
+  font-size: 0.87rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jarvis-sched-row-detail {
+  margin-top: 3px;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.jarvis-sched-row-when {
+  margin-top: 4px;
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.jarvis-sched-kind {
+  flex: 0 0 auto;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+}
+
+.kind-client {
+  background: rgba(0, 240, 255, 0.12);
+  border-color: rgba(0, 240, 255, 0.35);
+  color: #67e8f9;
+}
+
+.kind-travel {
+  background: rgba(167, 139, 250, 0.12);
+  border-color: rgba(167, 139, 250, 0.35);
+  color: #c4b5fd;
+}
+
+.kind-deadline {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: rgba(248, 113, 113, 0.4);
+  color: #fca5a5;
+}
+
+.kind-meeting {
+  background: rgba(251, 191, 36, 0.12);
+  border-color: rgba(251, 191, 36, 0.35);
+  color: #fcd34d;
+}
+
+.kind-task {
+  background: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.25);
+  color: #cbd5e1;
+}
+
+.jarvis-sched-remove {
+  flex: 0 0 auto;
+  padding: 2px;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.jarvis-sched-remove:hover {
+  color: #f87171;
+}
+
 @keyframes hud-breathe {
   0%, 100% {
     transform: scale(0.96);
