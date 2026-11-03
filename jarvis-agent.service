@@ -1,0 +1,15 @@
+[Unit]
+Description=JARVIS Agent Mission Control Server
+After=network.target
+
+[Service]
+Type=simple
+User=%I
+WorkingDirectory=%h/jarvis-agent
+ExecStart=/usr/bin/bash %h/jarvis-agent/start.sh
+Restart=always
+RestartSec=5
+Environment=PATH=/usr/local/bin:/usr/bin:/bin:%h/.local/bin
+
+[Install]
+WantedBy=multi-user.target
