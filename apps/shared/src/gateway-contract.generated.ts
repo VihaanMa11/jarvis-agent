@@ -1915,6 +1915,44 @@ export interface I18nCatalogResult {
   surface: LocaleSurface
   messages: Record<string, string>
 }
+/** ``action`` selects the verb; ``item`` is the upsert payload, ``id`` the remove target. */
+export interface ScheduleParams {
+  action?: string
+  id?: string | null
+  item?: ScheduleDraft | null
+}
+/** An entry to write. ``id`` names an existing entry to patch; unknown keys are ignored. */
+export interface ScheduleDraft {
+  date?: string | null
+  detail?: string | null
+  done?: boolean | null
+  id?: string | null
+  kind?: ScheduleKind | null
+  source?: string | null
+  time?: string | null
+  title?: string | null
+}
+/** What kind of commitment an entry is; drives its badge in the panel. */
+export type ScheduleKind = 'client' | 'deadline' | 'meeting' | 'task' | 'travel'
+/** The refreshed list always travels back, so a client never needs a second round trip. */
+export interface ScheduleResult {
+  items: ScheduleItem[]
+  item?: ScheduleItem | null
+  removed?: boolean | null
+}
+/** One diary entry. ``date`` is a local calendar day, ``time`` a local 24h clock. */
+export interface ScheduleItem {
+  id: string
+  title: string
+  date: string
+  kind: ScheduleKind
+  done: boolean
+  created_at: number
+  updated_at: number
+  detail?: string | null
+  time?: string | null
+  source?: string | null
+}
 export type PingParams = Record<string, never>
 export interface PingResult {
   pong: boolean
@@ -6189,6 +6227,8 @@ export interface RpcMethods {
   'input.detect_drop': { params: InputDetectDropParams; result: InputDetectDropResult }
   /** Session/message counts over the last ``days`` for the (optionally scoped) profile store. */
   'insights.get': { params: InsightsGetParams; result: InsightsGetResult }
+  /** List, add, edit or delete the operator's diary entries for this home. */
+  'jarvis.schedule': { params: ScheduleParams; result: ScheduleResult }
   /** Archive a skill (restorable via curator) or remove a memory chunk. */
   'learning.delete': { params: LearningNodeParams; result: LearningMutationResult }
   /** Node content (SKILL.md or memory chunk) for an edit prefill. */
@@ -6612,6 +6652,7 @@ export const RPC_METHODS = [
   'image.generate',
   'input.detect_drop',
   'insights.get',
+  'jarvis.schedule',
   'learning.delete',
   'learning.detail',
   'learning.edit',

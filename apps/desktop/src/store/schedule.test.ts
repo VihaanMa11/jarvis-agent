@@ -185,3 +185,129 @@ describe('ordering', () => {
     ).toBe(null)
   })
 })
+
+describe('gateway sync', () => {
+  const roundTrip = (items: unknown[]) => async (_method: string, _params?: Record<string, unknown>) => ({ items })
+
+  it('adopts the server list and reports itself synced', async () => {
+    const store = await loadStore()
+    const seen: string[] = []
+
+    const request = async (method: string) => {
+      seen.push(method)
+
+      return {
+        items: [
+          {
+            id: 'sched-server-1',
+            title: 'Fly to Kolkata — BNPL client',
+            date: '2026-11-09',
+            time: '05:05',
+            kind: 'travel',
+            done: false,
+            created_at: 1,
+            updated_at: 1
+          }
+        ]
+      }
+    }
+
+    expect(await store.hydrateSchedule(request)).toBe(true)
+    expect(seen).toEqual(['jarvis.schedule'])
+    expect(store.scheduleItems()).toHaveLength(1)
+    expect(store.scheduleItems()[0]).toMatchObject({ date: '2026-11-09', kind: 'travel', time: '05:05' })
+    expect(store.$scheduleSync.get()).toBe('synced')
+    // The snapshot is cached, so the row still draws on the next cold start.
+    expect(JSON.parse(localStorage.getItem(KEY)!)).toHaveLength(1)
+  })
+
+  it('keeps the cache and says so when the gateway is away', async () => {
+    const store = await loadStore()
+    store.addScheduleItem({ date: '2026-11-20', title: 'Kept locally' })
+
+    const failing = async () => {
+      throw new Error('offline')
+    }
+
+    expect(await store.hydrateSchedule(failing)).toBe(false)
+    expect(store.scheduleItems().map(item => item.title)).toEqual(['Kept locally'])
+    expect(store.$scheduleSync.get()).toBe('local')
+  })
+
+  it('drops unusable rows the gateway hands back', async () => {
+    const store = await loadStore()
+    await store.hydrateSchedule(
+      roundTrip([
+        { date: '2026-02-31', title: 'Bad day' },
+        { date: '2026-11-20', title: 'Fine' }
+      ])
+    )
+
+    expect(store.scheduleItems().map(item => item.title)).toEqual(['Fine'])
+  })
+
+  it('create adopts the id and timestamps the server mints', async () => {
+    const store = await loadStore()
+    let sent: Record<string, unknown> = {}
+
+    const request = async (_method: string, params?: Record<string, unknown>) => {
+      sent = (params?.item ?? {}) as Record<string, unknown>
+
+      return {
+        item: {
+          id: 'sched-server-2',
+          title: 'Fly to Kolkata — BNPL client',
+          date: '2026-11-09',
+          kind: 'travel',
+          done: false,
+          created_at: 7,
+          updated_at: 7
+        }
+      }
+    }
+
+    const row = await store.createScheduleItem(request, {
+      date: '2026-11-09',
+      kind: 'travel',
+      title: 'Fly to Kolkata — BNPL client'
+    })
+
+    expect(row?.id).toBe('sched-server-2')
+    expect(store.scheduleItems()).toHaveLength(1)
+    expect(store.scheduleItems()[0].id).toBe('sched-server-2')
+    // A new entry carries no id: the server owns identity.
+    expect(sent.id).toBeUndefined()
+    expect(sent.source).toBe('desktop')
+    expect(store.$scheduleSync.get()).toBe('synced')
+  })
+
+  it('keeps the optimistic row when the write fails, and marks it local', async () => {
+    const store = await loadStore()
+
+    const failing = async () => {
+      throw new Error('offline')
+    }
+
+    const row = await store.createScheduleItem(failing, { date: '2026-11-20', title: 'Written offline' })
+
+    expect(row).not.toBeNull()
+    expect(store.scheduleItems().map(item => item.title)).toEqual(['Written offline'])
+    expect(store.$scheduleSync.get()).toBe('local')
+  })
+
+  it('delete removes locally and tells the server', async () => {
+    const store = await loadStore()
+    const item = store.addScheduleItem({ date: '2026-11-20', title: 'Cancel this' })!
+    const calls: Array<Record<string, unknown>> = []
+
+    const request = async (_method: string, params?: Record<string, unknown>) => {
+      calls.push(params ?? {})
+
+      return { items: [], removed: true }
+    }
+
+    expect(await store.deleteScheduleItem(request, item.id)).toBe(true)
+    expect(store.scheduleItems()).toEqual([])
+    expect(calls).toEqual([{ action: 'remove', id: item.id }])
+  })
+})

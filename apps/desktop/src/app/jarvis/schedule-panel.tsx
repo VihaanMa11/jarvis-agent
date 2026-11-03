@@ -15,28 +15,32 @@
  */
 
 import { useStore } from '@nanostores/react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Check, ChevronLeft, ChevronRight, Clock, Plus, Trash2 } from '@/lib/icons'
+import { requestGatewayForProfile } from '@/store/gateway'
+import { $activeGatewayProfile } from '@/store/profile'
 import {
   $scheduleItems,
-  addScheduleItem,
+  $scheduleSync,
   BUCKET_LABELS,
+  createScheduleItem,
   dayKey,
+  deleteScheduleItem,
   formatDayKey,
   formatMonth,
+  hydrateSchedule,
+  patchScheduleItem,
   relativeDayLabel,
-  removeScheduleItem,
   SCHEDULE_KIND_LABELS,
   SCHEDULE_KINDS,
   scheduleBucket,
   scheduleItemsForDay,
   todayKey,
-  toggleScheduleItemDone,
   upcomingScheduleItems
 } from '@/store/schedule'
-import type { ScheduleBucket, ScheduleItem, ScheduleKind } from '@/store/schedule'
+import type { ScheduleBucket, ScheduleItem, ScheduleKind, ScheduleRequester } from '@/store/schedule'
 
 const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 const BUCKET_ORDER: readonly ScheduleBucket[] = ['overdue', 'today', 'tomorrow', 'week', 'later']
@@ -57,13 +61,21 @@ function kindClass(kind: ScheduleKind): string {
   return `jarvis-sched-kind kind-${kind}`
 }
 
-function ScheduleRow({ item, onDelete }: { item: ScheduleItem; onDelete: (id: string) => void }) {
+function ScheduleRow({
+  item,
+  onDelete,
+  onToggle
+}: {
+  item: ScheduleItem
+  onDelete: (id: string) => void
+  onToggle: (item: ScheduleItem) => void
+}) {
   return (
     <div className={`jarvis-sched-row${item.done ? ' is-done' : ''}`}>
       <button
         aria-label={item.done ? `Reopen ${item.title}` : `Mark ${item.title} done`}
         className="jarvis-sched-check"
-        onClick={() => toggleScheduleItemDone(item.id)}
+        onClick={() => onToggle(item)}
         type="button"
       >
         {item.done ? <Check className="size-3.5" /> : null}
@@ -95,8 +107,20 @@ function ScheduleRow({ item, onDelete }: { item: ScheduleItem; onDelete: (id: st
 
 export function ScheduleBoard() {
   const items = useStore($scheduleItems)
+  const sync = useStore($scheduleSync)
+  const profile = useStore($activeGatewayProfile)
   const today = todayKey()
   const todayDate = new Date()
+
+  // The gateway owns the diary; this panel reads and writes it through `jarvis.schedule`.
+  const request = useCallback<ScheduleRequester>(
+    (method, params) => requestGatewayForProfile(profile || 'default', method, params ?? {}),
+    [profile]
+  )
+
+  useEffect(() => {
+    void hydrateSchedule(request)
+  }, [request])
 
   const [cursor, setCursor] = useState(() => ({ month: todayDate.getMonth(), year: todayDate.getFullYear() }))
   const [selectedDay, setSelectedDay] = useState<null | string>(null)
@@ -149,34 +173,45 @@ export function ScheduleBoard() {
         return
       }
 
-      const created = addScheduleItem({
+      void createScheduleItem(request, {
         date: draftDate,
         kind: draftKind,
         title: draftTitle,
         ...(draftTime ? { time: draftTime } : {})
+      }).then(row => {
+        if (!row) {
+          setDraftError('That date or time is not valid.')
+
+          return
+        }
+
+        setDraftError('')
+        setDraftTitle('')
+        setDraftTime('')
+        setDraftDate(row.date)
+
+        // Land the calendar on whatever was just added.
+        const added = new Date(row.date)
+
+        setCursor({ month: added.getMonth(), year: added.getFullYear() })
       })
-
-      if (!created) {
-        setDraftError('That date or time is not valid.')
-
-        return
-      }
-
-      setDraftError('')
-      setDraftTitle('')
-      setDraftTime('')
-      setDraftDate(created.date)
-      // Land the calendar on whatever was just added.
-      const added = new Date(created.date)
-
-      setCursor({ month: added.getMonth(), year: added.getFullYear() })
     },
-    [draftDate, draftKind, draftTime, draftTitle]
+    [draftDate, draftKind, draftTime, draftTitle, request]
   )
 
-  const handleDelete = useCallback((id: string) => {
-    removeScheduleItem(id)
-  }, [])
+  const handleDelete = useCallback(
+    (id: string) => {
+      void deleteScheduleItem(request, id)
+    },
+    [request]
+  )
+
+  const handleToggle = useCallback(
+    (item: ScheduleItem) => {
+      void patchScheduleItem(request, item.id, { done: !item.done })
+    },
+    [request]
+  )
 
   const openCount = items.filter(item => !item.done).length
 
@@ -189,7 +224,23 @@ export function ScheduleBoard() {
             <Clock className="size-4 text-cyan-400" />
             Schedule & Calendar
           </h3>
-          <span className="text-xs text-slate-400">{openCount} open</span>
+          <span className="text-xs text-slate-400">
+            {openCount} open ·{' '}
+            <span
+              className={
+                sync === 'synced' ? 'text-emerald-400' : sync === 'syncing' ? 'text-amber-400' : 'text-slate-500'
+              }
+              title={
+                sync === 'synced'
+                  ? 'Synced with the JARVIS server — entries are visible to every surface'
+                  : sync === 'syncing'
+                    ? 'Talking to the JARVIS server'
+                    : 'Server unreachable — entries are kept on this machine'
+              }
+            >
+              {sync === 'synced' ? 'server' : sync === 'syncing' ? 'syncing' : 'local'}
+            </span>
+          </span>
         </div>
 
         <div className="jarvis-cal-head">
@@ -331,7 +382,9 @@ export function ScheduleBoard() {
           selectedItems.length === 0 ? (
             <p className="text-sm text-slate-500">Nothing on this day yet.</p>
           ) : (
-            selectedItems.map(item => <ScheduleRow item={item} key={item.id} onDelete={handleDelete} />)
+            selectedItems.map(item => (
+              <ScheduleRow item={item} key={item.id} onDelete={handleDelete} onToggle={handleToggle} />
+            ))
           )
         ) : upcoming.length === 0 ? (
           <p className="text-sm text-slate-500">
@@ -350,7 +403,7 @@ export function ScheduleBoard() {
                 <div className="jarvis-sched-group" key={bucket}>
                   <div className={`jarvis-sched-group-label label-${bucket}`}>{BUCKET_LABELS[bucket]}</div>
                   {bucketItems.map(item => (
-                    <ScheduleRow item={item} key={item.id} onDelete={handleDelete} />
+                    <ScheduleRow item={item} key={item.id} onDelete={handleDelete} onToggle={handleToggle} />
                   ))}
                 </div>
               )

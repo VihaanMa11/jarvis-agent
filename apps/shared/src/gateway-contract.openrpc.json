@@ -1591,6 +1591,24 @@
       }
     },
     {
+      "name": "jarvis.schedule",
+      "summary": "List, add, edit or delete the operator's diary entries for this home.",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/ScheduleParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/ScheduleResult"
+        }
+      }
+    },
+    {
       "name": "learning.delete",
       "summary": "Archive a skill (restorable via curator) or remove a memory chunk.",
       "params": [
@@ -34404,6 +34422,278 @@
           "session_create"
         ],
         "title": "RuntimeDescribeResult",
+        "type": "object"
+      },
+      "ScheduleDraft": {
+        "additionalProperties": false,
+        "description": "An entry to write. ``id`` names an existing entry to patch; unknown keys are ignored.",
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Date"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Detail"
+          },
+          "done": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Done"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Id"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScheduleKind"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source"
+          },
+          "time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Time"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Title"
+          }
+        },
+        "title": "ScheduleDraft",
+        "type": "object"
+      },
+      "ScheduleItem": {
+        "additionalProperties": false,
+        "description": "One diary entry. ``date`` is a local calendar day, ``time`` a local 24h clock.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ScheduleKind"
+          },
+          "done": {
+            "title": "Done",
+            "type": "boolean"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "integer"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "integer"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Detail"
+          },
+          "time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Time"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "date",
+          "kind",
+          "done",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ScheduleItem",
+        "type": "object"
+      },
+      "ScheduleKind": {
+        "description": "What kind of commitment an entry is; drives its badge in the panel.",
+        "enum": [
+          "client",
+          "deadline",
+          "meeting",
+          "task",
+          "travel"
+        ],
+        "title": "ScheduleKind",
+        "type": "string"
+      },
+      "ScheduleParams": {
+        "additionalProperties": false,
+        "description": "``action`` selects the verb; ``item`` is the upsert payload, ``id`` the remove target.",
+        "properties": {
+          "action": {
+            "default": "list",
+            "title": "Action",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Id"
+          },
+          "item": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScheduleDraft"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "title": "ScheduleParams",
+        "type": "object"
+      },
+      "ScheduleResult": {
+        "additionalProperties": false,
+        "description": "The refreshed list always travels back, so a client never needs a second round trip.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduleItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "item": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScheduleItem"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "removed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Removed"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ScheduleResult",
         "type": "object"
       },
       "SecretRequestParams": {

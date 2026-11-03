@@ -345,3 +345,196 @@ export function nextScheduleItem(items: readonly ScheduleItem[], now: Date = new
 
   return laterToday ?? live.find(item => item.date > today) ?? null
 }
+
+// ── gateway sync ────────────────────────────────────────────────────────────
+// The diary's authority is the GATEWAY (`hermes_cli/jarvis_schedule.py`, RPC
+// `jarvis.schedule`), because the agent writes entries from chat and every surface reads
+// the same list. This store is the panel's CACHE of that truth: localStorage keeps the
+// last snapshot so the row still draws with the gateway away, and a mutation paints
+// locally first, then reconciles against the row the server hands back. A write that the
+// server refuses keeps the optimistic row and drops the panel to `local` — the user's
+// typing is never thrown away to make the sync indicator look green.
+
+/** A gateway request function: `requestGatewayForProfile(profile, method, params)`. */
+export type ScheduleRequester = (method: string, params?: Record<string, unknown>) => Promise<unknown>
+
+export type ScheduleSync = 'local' | 'synced' | 'syncing'
+
+export const $scheduleSync = atom<ScheduleSync>('local')
+
+/** The wire row (`jarvis.schedule`), snake_case exactly as it travels. */
+interface ScheduleWireItem {
+  created_at?: number
+  date?: string
+  detail?: string
+  done?: boolean
+  id?: string
+  kind?: string
+  source?: string
+  time?: string
+  title?: string
+  updated_at?: number
+}
+
+/** Server row → panel entry. Anything unusable reads as null and is dropped. */
+export function fromScheduleWire(row: ScheduleWireItem): ScheduleItem | null {
+  return normalizeScheduleItem({
+    createdAt: row.created_at,
+    date: row.date,
+    done: row.done,
+    id: row.id,
+    title: row.title,
+    ...(row.detail ? { detail: row.detail } : {}),
+    ...(row.kind ? { kind: row.kind } : {}),
+    ...(row.time ? { time: row.time } : {})
+  })
+}
+
+/** The subset of entry fields a write can carry; absent keys stay absent on the wire. */
+type ScheduleWireDraft = Partial<{
+  date: string
+  detail: string
+  done: boolean
+  id: string
+  kind: ScheduleKind
+  source: string
+  time: string
+  title: string
+}>
+
+function wireDraft(draft: ScheduleWireDraft): Record<string, unknown> {
+  return {
+    ...(draft.id ? { id: draft.id } : {}),
+    ...(draft.date ? { date: draft.date } : {}),
+    ...(draft.kind ? { kind: draft.kind } : {}),
+    ...(draft.title ? { title: draft.title } : {}),
+    ...(draft.time ? { time: draft.time } : {}),
+    ...(draft.detail ? { detail: draft.detail } : {}),
+    ...(draft.source ? { source: draft.source } : {}),
+    ...(typeof draft.done === 'boolean' ? { done: draft.done } : {})
+  }
+}
+
+function adopt(optimisticId: string, stored: ScheduleItem): void {
+  const current = scheduleItems()
+
+  const next = current.some(item => item.id === optimisticId)
+    ? current.map(item => (item.id === optimisticId ? stored : item))
+    : [...current, stored]
+
+  commit(next)
+}
+
+/** Pull the gateway's list into the cache. False when it could not be reached. */
+export async function hydrateSchedule(request: ScheduleRequester): Promise<boolean> {
+  $scheduleSync.set('syncing')
+
+  try {
+    const result = (await request('jarvis.schedule', { action: 'list' })) as { items?: ScheduleWireItem[] } | null
+    const rows = Array.isArray(result?.items) ? result.items : []
+
+    commit(rows.map(fromScheduleWire).filter((item): item is ScheduleItem => item !== null))
+    $scheduleSync.set('synced')
+
+    return true
+  } catch {
+    // Offline, or a backend older than this panel: keep the cached snapshot.
+    $scheduleSync.set('local')
+
+    return false
+  }
+}
+
+/** Create an entry: paint it now, then adopt the row the gateway stores. */
+export async function createScheduleItem(
+  request: ScheduleRequester,
+  draft: ScheduleDraft
+): Promise<ScheduleItem | null> {
+  const optimistic = addScheduleItem(draft)
+
+  if (!optimistic) {
+    return null
+  }
+
+  $scheduleSync.set('syncing')
+
+  try {
+    const result = (await request('jarvis.schedule', {
+      action: 'upsert',
+      item: wireDraft({ ...draft, source: 'desktop' })
+    })) as { item?: ScheduleWireItem } | null
+
+    const stored = result?.item ? fromScheduleWire(result.item) : null
+
+    if (!stored) {
+      $scheduleSync.set('local')
+
+      return optimistic
+    }
+
+    adopt(optimistic.id, stored)
+    $scheduleSync.set('synced')
+
+    return stored
+  } catch {
+    $scheduleSync.set('local')
+
+    return optimistic
+  }
+}
+
+/** Patch an entry (done, title, time…): same optimistic-then-adopt dance. */
+export async function patchScheduleItem(
+  request: ScheduleRequester,
+  id: string,
+  patch: Partial<Omit<ScheduleItem, 'createdAt' | 'id'>>
+): Promise<boolean> {
+  if (!updateScheduleItem(id, patch)) {
+    return false
+  }
+
+  $scheduleSync.set('syncing')
+
+  try {
+    const result = (await request('jarvis.schedule', {
+      action: 'upsert',
+      item: wireDraft({ id, ...patch })
+    })) as { item?: ScheduleWireItem } | null
+
+    const stored = result?.item ? fromScheduleWire(result.item) : null
+
+    if (stored) {
+      adopt(id, stored)
+    }
+
+    $scheduleSync.set('synced')
+
+    return true
+  } catch {
+    $scheduleSync.set('local')
+
+    return true
+  }
+}
+
+/** Remove an entry locally and on the gateway. */
+export async function deleteScheduleItem(request: ScheduleRequester, id: string): Promise<boolean> {
+  const removed = removeScheduleItem(id)
+
+  if (!removed) {
+    return false
+  }
+
+  $scheduleSync.set('syncing')
+
+  try {
+    await request('jarvis.schedule', { action: 'remove', id })
+    $scheduleSync.set('synced')
+
+    return true
+  } catch {
+    $scheduleSync.set('local')
+
+    return true
+  }
+}
