@@ -31,14 +31,10 @@ if ! command -v uv >/dev/null 2>&1; then
   export PATH="${HOME}/.local/bin:${PATH}"
 fi
 
-# 3. Clone or Link hermes-agent engine
-echo -e "\n${AMBER}[3/5] Setting up Hermes Agent core...${NC}"
-HERMES_REPO_DIR="${HOME}/hermes-agent"
-if [ ! -d "${HERMES_REPO_DIR}" ]; then
-  git clone https://github.com/NousResearch/hermes-agent.git "${HERMES_REPO_DIR}"
-fi
-
-cd "${HERMES_REPO_DIR}"
+# 3. Setup Hermes Agent environment
+echo -e "\n${AMBER}[3/5] Setting up Hermes Agent environment...${NC}"
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${REPO_DIR}"
 if [ -f "activate" ]; then
   source ./activate || true
 fi

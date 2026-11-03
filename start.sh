@@ -1,18 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-HERMES_REPO_DIR="${HOME}/hermes-agent"
-if [ ! -d "${HERMES_REPO_DIR}" ]; then
-  # If running in local clone
-  if [ -d "../hermes-agent" ]; then
-    HERMES_REPO_DIR="$(cd ../hermes-agent && pwd)"
-  else
-    echo "❌ hermes-agent directory not found. Run ./setup.sh first."
-    exit 1
-  fi
-fi
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${REPO_DIR}"
 
-cd "${HERMES_REPO_DIR}"
 if [ -f "activate" ]; then
   source ./activate
 fi

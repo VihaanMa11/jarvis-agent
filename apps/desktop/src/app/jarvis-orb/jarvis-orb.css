@@ -1,0 +1,192 @@
+.jarvis-orb-container {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+/* Outer ring for dragging & visual boundary */
+.jarvis-orb-outer-ring {
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0, 240, 255, 0.2);
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.15);
+  pointer-events: none;
+  transition: all 0.4s ease;
+}
+
+.jarvis-orb-container:hover .jarvis-orb-outer-ring {
+  border-color: rgba(0, 240, 255, 0.5);
+  box-shadow: 0 0 18px rgba(0, 240, 255, 0.35);
+}
+
+/* SVG Arc Reactor Canvas */
+.jarvis-reactor-svg {
+  width: 88px;
+  height: 88px;
+  pointer-events: auto;
+}
+
+/* Base Reactor Core */
+.reactor-core {
+  transform-origin: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Concentric Rings */
+.ring-outer, .ring-middle, .ring-inner {
+  transform-origin: center;
+  fill: none;
+}
+
+/* ────────────── State: IDLE ────────────── */
+.state-idle .reactor-core {
+  fill: rgba(0, 240, 255, 0.35);
+  filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.5));
+  animation: orb-breathe 3.5s ease-in-out infinite;
+}
+
+.state-idle .ring-outer {
+  stroke: rgba(0, 240, 255, 0.25);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 12;
+  animation: orb-rotate-slow 24s linear infinite;
+}
+
+.state-idle .ring-inner {
+  stroke: rgba(0, 240, 255, 0.3);
+  stroke-width: 1;
+}
+
+/* ────────────── State: LISTENING ────────────── */
+.state-listening .reactor-core {
+  fill: #00f0ff;
+  filter: drop-shadow(0 0 16px rgba(0, 240, 255, 0.9));
+  animation: orb-pulse-listening 1.2s ease-in-out infinite;
+}
+
+.state-listening .ring-outer {
+  stroke: #00f0ff;
+  stroke-width: 2;
+  stroke-dasharray: 14 6;
+  filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.8));
+  animation: orb-rotate-fast 4s linear infinite;
+}
+
+.state-listening .ring-middle {
+  stroke: rgba(0, 240, 255, 0.7);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+  animation: orb-rotate-reverse 3s linear infinite;
+}
+
+/* ────────────── State: THINKING ────────────── */
+.state-thinking .reactor-core {
+  fill: #00c8ff;
+  filter: drop-shadow(0 0 12px rgba(255, 183, 0, 0.6));
+  animation: orb-breathe 1.5s ease-in-out infinite;
+}
+
+.state-thinking .ring-outer {
+  stroke: #ffb700;
+  stroke-width: 2.2;
+  stroke-dasharray: 20 8 4 8;
+  filter: drop-shadow(0 0 8px rgba(255, 183, 0, 0.8));
+  animation: orb-rotate-fast 2s linear infinite;
+}
+
+.state-thinking .ring-middle {
+  stroke: #00e5ff;
+  stroke-width: 1.8;
+  stroke-dasharray: 12 12;
+  animation: orb-rotate-reverse 2.5s linear infinite;
+}
+
+/* ────────────── State: SPEAKING ────────────── */
+.state-speaking .reactor-core {
+  fill: #ff9900;
+  filter: drop-shadow(0 0 20px rgba(255, 153, 0, 0.95));
+  animation: orb-speaking-core 0.8s ease-in-out infinite alternate;
+}
+
+.state-speaking .ring-outer {
+  stroke: #ffaa00;
+  stroke-width: 2.5;
+  stroke-dasharray: 18 6;
+  filter: drop-shadow(0 0 12px rgba(255, 170, 0, 0.8));
+  animation: orb-rotate-fast 3s linear infinite;
+}
+
+.state-speaking .ring-middle {
+  stroke: #ffdd44;
+  stroke-width: 1.5;
+  stroke-dasharray: 8 8;
+  animation: orb-rotate-reverse 2s linear infinite;
+}
+
+/* ────────────── State: ERROR ────────────── */
+.state-error .reactor-core {
+  fill: #ff3344;
+  filter: drop-shadow(0 0 14px rgba(255, 51, 68, 0.8));
+}
+
+.state-error .ring-outer {
+  stroke: #ff3344;
+  stroke-width: 2;
+  stroke-dasharray: 4 8;
+}
+
+/* ────────────── Keyframe Animations ────────────── */
+@keyframes orb-breathe {
+  0%, 100% {
+    transform: scale(0.92);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+@keyframes orb-pulse-listening {
+  0%, 100% {
+    transform: scale(0.95);
+    filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.7));
+  }
+  50% {
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 22px rgba(0, 240, 255, 1));
+  }
+}
+
+@keyframes orb-speaking-core {
+  0% {
+    transform: scale(0.94);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+}
+
+@keyframes orb-rotate-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes orb-rotate-fast {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes orb-rotate-reverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
