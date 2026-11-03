@@ -15,6 +15,7 @@
 import { atom } from 'nanostores'
 
 import { readJson, writeJson } from '@/lib/storage'
+import { requestGatewayForAgent, requestGatewayForProfile } from '@/store/gateway'
 
 export type ScheduleKind = 'client' | 'deadline' | 'meeting' | 'task' | 'travel'
 
@@ -362,6 +363,33 @@ export type ScheduleSync = 'local' | 'synced' | 'syncing'
 
 export const $scheduleSync = atom<ScheduleSync>('local')
 
+/** Why the last sync failed — surfaced in the panel instead of failing silently. */
+export const $scheduleSyncError = atom<null | string>(null)
+
+/**
+ * The panel's requester: the composite (connectionId, profile) route first — the shape every
+ * sessionless desktop surface uses, and the only one that follows a REMOTE connection — with the
+ * ambient profile socket as the second rung for a resolver that cannot route the pair. Both rungs
+ * failing is one sync failure, never a partial write: the caller keeps its optimistic row.
+ */
+export function scheduleRequester(connectionId: null | string, profile: string): ScheduleRequester {
+  const key = profile || 'default'
+
+  return async (method, params) => {
+    const payload = params ?? {}
+
+    if (connectionId) {
+      try {
+        return await requestGatewayForAgent<unknown>(connectionId, key, method, payload)
+      } catch {
+        // Fall through to the ambient socket rather than failing the read outright.
+      }
+    }
+
+    return requestGatewayForProfile<unknown>(key, method, payload)
+  }
+}
+
 /** The wire row (`jarvis.schedule`), snake_case exactly as it travels. */
 interface ScheduleWireItem {
   created_at?: number
@@ -435,11 +463,13 @@ export async function hydrateSchedule(request: ScheduleRequester): Promise<boole
 
     commit(rows.map(fromScheduleWire).filter((item): item is ScheduleItem => item !== null))
     $scheduleSync.set('synced')
+    $scheduleSyncError.set(null)
 
     return true
-  } catch {
+  } catch (error) {
     // Offline, or a backend older than this panel: keep the cached snapshot.
     $scheduleSync.set('local')
+    $scheduleSyncError.set(error instanceof Error ? error.message : String(error))
 
     return false
   }
@@ -474,10 +504,12 @@ export async function createScheduleItem(
 
     adopt(optimistic.id, stored)
     $scheduleSync.set('synced')
+    $scheduleSyncError.set(null)
 
     return stored
-  } catch {
+  } catch (error) {
     $scheduleSync.set('local')
+    $scheduleSyncError.set(error instanceof Error ? error.message : String(error))
 
     return optimistic
   }
@@ -508,10 +540,12 @@ export async function patchScheduleItem(
     }
 
     $scheduleSync.set('synced')
+    $scheduleSyncError.set(null)
 
     return true
-  } catch {
+  } catch (error) {
     $scheduleSync.set('local')
+    $scheduleSyncError.set(error instanceof Error ? error.message : String(error))
 
     return true
   }
@@ -530,10 +564,12 @@ export async function deleteScheduleItem(request: ScheduleRequester, id: string)
   try {
     await request('jarvis.schedule', { action: 'remove', id })
     $scheduleSync.set('synced')
+    $scheduleSyncError.set(null)
 
     return true
-  } catch {
+  } catch (error) {
     $scheduleSync.set('local')
+    $scheduleSyncError.set(error instanceof Error ? error.message : String(error))
 
     return true
   }

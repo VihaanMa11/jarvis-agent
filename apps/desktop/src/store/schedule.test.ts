@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+// The store routes through the app's gateway client; mocking it keeps this test about the
+// diary (and lets the request ladder be observed) instead of booting the whole app.
+vi.mock('@/store/gateway', () => ({
+  requestGatewayForAgent: vi.fn(),
+  requestGatewayForProfile: vi.fn()
+}))
+
 const KEY = 'hermes.desktop.schedule.v1'
 
 /** Fresh module per test: the atom reads storage once, at import time. */
@@ -31,6 +38,63 @@ describe('day keys', () => {
     expect(addDays('2026-11-30', 2)).toBe('2026-12-02')
     expect(daysBetween('2026-11-30', '2026-12-02')).toBe(2)
     expect(daysBetween('2026-12-02', '2026-11-30')).toBe(-2)
+  })
+})
+
+describe('request ladder', () => {
+  /** Load the store FIRST: `loadStore()` resets the module registry, so a gateway imported
+   *  before it would be a different (unused) instance than the one the store holds. */
+  async function loaded() {
+    const store = await loadStore()
+    const gw = await import('@/store/gateway')
+
+    vi.mocked(gw.requestGatewayForAgent).mockReset()
+    vi.mocked(gw.requestGatewayForProfile).mockReset()
+
+    return { gw, store }
+  }
+
+  it('uses the (connection, profile) route first', async () => {
+    const { gw, store } = await loaded()
+    vi.mocked(gw.requestGatewayForAgent).mockResolvedValue({ items: [] })
+    vi.mocked(gw.requestGatewayForProfile).mockResolvedValue({ items: [] })
+
+    await store.scheduleRequester('conn-1', 'default')('jarvis.schedule', { action: 'list' })
+
+    expect(gw.requestGatewayForAgent).toHaveBeenCalledWith('conn-1', 'default', 'jarvis.schedule', { action: 'list' })
+    expect(gw.requestGatewayForProfile).not.toHaveBeenCalled()
+  })
+
+  it('falls back to the ambient profile socket when the composite route cannot be resolved', async () => {
+    const { gw, store } = await loaded()
+    vi.mocked(gw.requestGatewayForAgent).mockRejectedValue(new Error('no such connection'))
+    vi.mocked(gw.requestGatewayForProfile).mockResolvedValue({ items: [] })
+
+    const result = await store.scheduleRequester('conn-1', 'default')('jarvis.schedule', { action: 'list' })
+
+    expect(result).toEqual({ items: [] })
+    expect(gw.requestGatewayForProfile).toHaveBeenCalledWith('default', 'jarvis.schedule', { action: 'list' })
+  })
+
+  it('skips the composite rung without a connection, and defaults the profile name', async () => {
+    const { gw, store } = await loaded()
+    vi.mocked(gw.requestGatewayForProfile).mockResolvedValue({ items: [] })
+
+    await store.scheduleRequester(null, '')('jarvis.schedule', { action: 'list' })
+
+    expect(gw.requestGatewayForAgent).not.toHaveBeenCalled()
+    expect(gw.requestGatewayForProfile).toHaveBeenCalledWith('default', 'jarvis.schedule', { action: 'list' })
+  })
+
+  it('records why a read failed so the panel can say so', async () => {
+    const store = await loadStore()
+
+    await store.hydrateSchedule(async () => {
+      throw new Error('unknown method: jarvis.schedule')
+    })
+
+    expect(store.$scheduleSync.get()).toBe('local')
+    expect(store.$scheduleSyncError.get()).toContain('unknown method')
   })
 })
 

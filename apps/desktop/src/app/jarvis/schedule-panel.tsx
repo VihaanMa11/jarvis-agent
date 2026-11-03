@@ -19,11 +19,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Check, ChevronLeft, ChevronRight, Clock, Plus, Trash2 } from '@/lib/icons'
-import { requestGatewayForProfile } from '@/store/gateway'
+import { $activeConnectionId } from '@/store/connections'
 import { $activeGatewayProfile } from '@/store/profile'
 import {
   $scheduleItems,
   $scheduleSync,
+  $scheduleSyncError,
   BUCKET_LABELS,
   createScheduleItem,
   dayKey,
@@ -37,6 +38,7 @@ import {
   SCHEDULE_KINDS,
   scheduleBucket,
   scheduleItemsForDay,
+  scheduleRequester,
   todayKey,
   upcomingScheduleItems
 } from '@/store/schedule'
@@ -108,15 +110,15 @@ function ScheduleRow({
 export function ScheduleBoard() {
   const items = useStore($scheduleItems)
   const sync = useStore($scheduleSync)
+  const syncError = useStore($scheduleSyncError)
   const profile = useStore($activeGatewayProfile)
   const today = todayKey()
   const todayDate = new Date()
 
-  // The gateway owns the diary; this panel reads and writes it through `jarvis.schedule`.
-  const request = useCallback<ScheduleRequester>(
-    (method, params) => requestGatewayForProfile(profile || 'default', method, params ?? {}),
-    [profile]
-  )
+  // The gateway owns the diary; this panel reads and writes it through `jarvis.schedule`,
+  // routed by (connection, profile) so a REMOTE backend is reached, not a local one.
+  const connectionId = useStore($activeConnectionId)
+  const request = useMemo<ScheduleRequester>(() => scheduleRequester(connectionId, profile), [connectionId, profile])
 
   useEffect(() => {
     void hydrateSchedule(request)
@@ -355,6 +357,11 @@ export function ScheduleBoard() {
           </Button>
         </form>
         {draftError ? <p className="jarvis-sched-error">{draftError}</p> : null}
+        {sync === 'local' && syncError ? (
+          <p className="jarvis-sched-error" title={syncError}>
+            Server unreachable — entries are kept on this machine. {syncError.slice(0, 120)}
+          </p>
+        ) : null}
       </div>
 
       {/* ── Upcoming, or the selected day ── */}
