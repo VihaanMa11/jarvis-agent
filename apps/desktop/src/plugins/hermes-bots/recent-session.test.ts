@@ -34,8 +34,8 @@ vi.mock('./routing', () => ({
 import { botRecentSession, openBotRecentSession } from './recent-session'
 import type { RosterRow } from './types'
 
-const bot = (last_session: RosterRow['last_session'], worker_session: RosterRow['worker_session'] = null) =>
-  ({ name: 'researcher', connectionId: 'local', last_session, worker_session, canonical_session: { id: 'bot-chat-1' } }) as RosterRow
+const bot = (last_session: RosterRow['last_session']) =>
+  ({ name: 'researcher', connectionId: 'local', last_session, canonical_session: { id: 'bot-chat-1' } }) as RosterRow
 
 beforeEach(() => {
   openRosterBot.mockClear()
@@ -76,23 +76,5 @@ describe('open recent session', () => {
 
     expect(openRosterBot).toHaveBeenCalledWith(row)
     expect(openSession).not.toHaveBeenCalled()
-  })
-
-  it('opens the freshest worker run when the profile has no listed session', async () => {
-    // A kanban/tool worker is deny-listed out of `last_session` server-side and
-    // arrives as `worker_session`; the menu item must still be usable for it.
-    const row = bot(null, { id: 'work-7', title: 'Build Vihaan Portfolio', source: 'kanban', last_active: 9 })
-    expect(botRecentSession(row)).toEqual({ id: 'work-7', title: 'Build Vihaan Portfolio' })
-
-    await expect(openBotRecentSession(row)).resolves.toBe(true)
-
-    const [id] = openSession.mock.calls[0] as unknown as [string, Record<string, unknown>]
-    expect(id).toBe('work-7')
-    expect(openRosterBot).not.toHaveBeenCalled()
-  })
-
-  it('prefers the listed session over a worker when both exist', () => {
-    const row = bot({ id: 'sess-9', title: 'Deploy notes', message_count: 1 }, { id: 'work-7', title: 'Task' })
-    expect(botRecentSession(row)).toEqual({ id: 'sess-9', title: 'Deploy notes' })
   })
 })

@@ -22,23 +22,18 @@ import { botConnectionRoute, botWorkspaceOwnerKey, setBotsWorkspaceOwner } from 
 import type { RosterRow } from './types'
 
 /** The listed session the menu item would open, or null when the profile has
- *  none yet (a brand-new bot whose only conversation is its hidden Bot Chat). */
+ *  none yet (a brand-new bot whose only conversation is its hidden Bot Chat).
+ *
+ *  Deliberately NOT the profile's `worker_session`: a kanban/tool worker transcript
+ *  is refused by the resume guard (`hermes_cli/kanban_resume_guard.py`, #68779) on
+ *  every write-capable resume surface, so offering it here could only produce a
+ *  "Couldn't open this session" error. Watch a worker on the Kanban board instead
+ *  (`hermes kanban log <id>`), where the dispatcher owns the run. */
 export function botRecentSession(bot: null | RosterRow | undefined): null | { id: string; title: string } {
   const last = bot?.last_session
   const id = String(last?.id || '').trim()
 
-  if (id) {
-    return { id, title: String(last?.title || '').trim() }
-  }
-
-  // Workers (a kanban/tool run) are deny-listed out of `last_session` server-side and
-  // reported as `worker_session` instead, so a bot whose only recent session is a
-  // dispatched job would otherwise leave this menu item permanently disabled — the
-  // exact case the item exists to serve. Fall back to the freshest worker.
-  const worker = bot?.worker_session
-  const workerId = String(worker?.id || '').trim()
-
-  return workerId ? { id: workerId, title: String(worker?.title || '').trim() } : null
+  return id ? { id, title: String(last?.title || '').trim() } : null
 }
 
 /** Open the bot's most recent listed session as a tab in its workspace.
