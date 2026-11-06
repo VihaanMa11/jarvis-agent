@@ -131,7 +131,7 @@ export interface RosterRow {
   ui_meta?: Record<string, unknown> & { 'hermes-bots'?: BotMeta }
   /** Compare-and-swap revisions, per ui_meta key. */
   ui_meta_revisions?: Record<string, number>
-  worker_session?: { last_active?: number } | null
+  worker_session?: { id?: string; source?: string; title?: string; last_active?: number } | null
 }
 
 /** A roster row reduced to what a group room needs to seat a member. */

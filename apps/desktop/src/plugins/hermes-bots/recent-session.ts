@@ -27,7 +27,18 @@ export function botRecentSession(bot: null | RosterRow | undefined): null | { id
   const last = bot?.last_session
   const id = String(last?.id || '').trim()
 
-  return id ? { id, title: String(last?.title || '').trim() } : null
+  if (id) {
+    return { id, title: String(last?.title || '').trim() }
+  }
+
+  // Workers (a kanban/tool run) are deny-listed out of `last_session` server-side and
+  // reported as `worker_session` instead, so a bot whose only recent session is a
+  // dispatched job would otherwise leave this menu item permanently disabled — the
+  // exact case the item exists to serve. Fall back to the freshest worker.
+  const worker = bot?.worker_session
+  const workerId = String(worker?.id || '').trim()
+
+  return workerId ? { id: workerId, title: String(worker?.title || '').trim() } : null
 }
 
 /** Open the bot's most recent listed session as a tab in its workspace.
