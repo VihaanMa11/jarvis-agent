@@ -739,21 +739,27 @@ contextBridge.exposeInMainWorld('jarvisBridge', {
   onToggleVoice: (callback: () => void) => {
     const listener = () => callback()
     ipcRenderer.on('hermes:jarvis:toggle-voice', listener)
+
     return () => ipcRenderer.removeListener('hermes:jarvis:toggle-voice', listener)
   },
   onVoiceStateChange: (callback: (data: { state: 'idle' | 'listening' | 'thinking' | 'speaking' | 'error'; audioLevel?: number }) => void) => {
     const listener = (_event: any, data: any) => callback(data)
     ipcRenderer.on('hermes:jarvis:voice-state', listener)
+
     return () => ipcRenderer.removeListener('hermes:jarvis:voice-state', listener)
   },
   moveOrb: (deltaX: number, deltaY: number) => {
     ipcRenderer.send('hermes:jarvis:move-orb', { deltaX, deltaY })
   },
+  beginOrbDrag: () => ipcRenderer.send('hermes:jarvis:begin-drag'),
+  dragOrb: () => ipcRenderer.send('hermes:jarvis:drag-move'),
+  endOrbDrag: () => ipcRenderer.send('hermes:jarvis:end-drag'),
   getInitialState: () => ipcRenderer.invoke('hermes:jarvis:get-initial-state'),
   toggleOrb: () => ipcRenderer.send('hermes:jarvis:toggle-orb'),
   onOpenRoute: (callback: (route: string) => void) => {
     const listener = (_event: any, route: string) => callback(route)
     ipcRenderer.on('hermes:jarvis:open-route', listener)
+
     return () => ipcRenderer.removeListener('hermes:jarvis:open-route', listener)
   }
 })

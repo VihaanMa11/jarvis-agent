@@ -44,6 +44,9 @@ export interface JarvisBridgeApi {
   onToggleVoice: (callback: () => void) => () => void
   onVoiceStateChange: (callback: (data: JarvisVoiceStatePayload) => void) => () => void
   moveOrb: (deltaX: number, deltaY: number) => void
+  beginOrbDrag: () => void
+  dragOrb: () => void
+  endOrbDrag: () => void
   getInitialState: () => Promise<JarvisVoiceStatePayload>
   toggleOrb: () => void
   onOpenRoute?: (callback: (route: string) => void) => () => void

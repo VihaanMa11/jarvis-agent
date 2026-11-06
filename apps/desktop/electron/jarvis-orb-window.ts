@@ -1,4 +1,5 @@
 import { pathToFileURL } from 'node:url'
+
 import { BrowserWindow, screen } from 'electron'
 
 export interface JarvisOrbWindowOptions {
@@ -32,8 +33,10 @@ export function createJarvisOrbWindowController({
   const resolveOrbUrl = () => {
     if (devServer) {
       const base = devServer.endsWith('/') ? devServer.slice(0, -1) : devServer
+
       return `${base}/?win=jarvis-orb#/`
     }
+
     return `${pathToFileURL(rendererIndex()).toString()}?win=jarvis-orb#/`
   }
 
@@ -41,6 +44,7 @@ export function createJarvisOrbWindowController({
     try {
       const primary = screen.getPrimaryDisplay()
       const workArea = primary.workArea
+
       return {
         x: Math.round(workArea.x + workArea.width - ORB_SIZE - PADDING),
         y: Math.round(workArea.y + PADDING)
@@ -119,6 +123,7 @@ export function createJarvisOrbWindowController({
 
   const sendVoiceState = (data: JarvisVoiceStateData) => {
     cachedState = data
+
     if (window && !window.isDestroyed()) {
       window.webContents.send('hermes:jarvis:voice-state', data)
     }
@@ -128,6 +133,7 @@ export function createJarvisOrbWindowController({
     if (!window || window.isDestroyed()) {
       return
     }
+
     try {
       const [curX, curY] = window.getPosition()
       window.setPosition(Math.round(curX + deltaX), Math.round(curY + deltaY))
@@ -136,11 +142,51 @@ export function createJarvisOrbWindowController({
     }
   }
 
+  // Native cursor-sampling drag (same proven pattern as the HUD/pet overlay).
+  // The renderer cannot drive this itself: its pointer coords are relative to
+  // the window we are moving, so a window that keeps up reports the same point
+  // every frame and the drag collapses. Main samples `screen.getCursorScreenPoint()`
+  // and parks the window at cursor-minus-grab-offset instead.
+  let dragOffset: { x: number; y: number } | null = null
+
+  const beginDrag = () => {
+    if (!window || window.isDestroyed()) {
+      return
+    }
+
+    try {
+      const cursor = screen.getCursorScreenPoint()
+      const [x, y] = window.getPosition()
+      dragOffset = { x: cursor.x - x, y: cursor.y - y }
+    } catch {
+      dragOffset = null
+    }
+  }
+
+  const dragTo = () => {
+    if (!window || window.isDestroyed() || !dragOffset) {
+      return
+    }
+
+    try {
+      const cursor = screen.getCursorScreenPoint()
+      window.setPosition(Math.round(cursor.x - dragOffset.x), Math.round(cursor.y - dragOffset.y))
+    } catch {
+      // Best effort move
+    }
+  }
+
+  const endDrag = () => {
+    dragOffset = null
+  }
+
   const toggle = () => {
     if (!window || window.isDestroyed()) {
       spawn()
+
       return
     }
+
     if (window.isVisible()) {
       window.hide()
     } else {
@@ -177,6 +223,9 @@ export function createJarvisOrbWindowController({
     hide,
     toggle,
     move,
+    beginDrag,
+    dragTo,
+    endDrag,
     sendVoiceState,
     getCachedState: () => cachedState,
     getWindow: () => window,
